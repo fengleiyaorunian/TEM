@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>FeatureTable widget with popup interaction | Sample | ArcGIS API for JavaScript 4.23</title>
+    <!-- 引入 echarts.js -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.23/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.23/"></script>
+
+    <style>
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* #main{
+            width: 600px;
+            height:400px;
+            right:10px;
+            top:10px;
+        } */
+        #btn2 {
+            font-size: 10px;
+            width: 180px;
+            height: 50px;
+            position: absolute;
+            left: 40%;
+            top: 1%
+        }
+
+        #conter {
+            left: 40px;
+        }
+
+        .esri-popup--is-docked-top-right .esri-popup__main-container {
+            max-height: 100%;
+        }
+
+        #appContainer {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        #viewDiv {
+            flex: 1;
+            width: 100%;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 45px;
+            height: 22px;
+            vertical-align: middle;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: 0.4s;
+            transition: 0.4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 1px;
+            background-color: white;
+            -webkit-transition: 0.4s;
+            transition: 0.4s;
+        }
+
+        input:checked + .slider {
+            background-color: #2196f3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196f3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(20px);
+            -ms-transform: translateX(20px);
+            transform: translateX(20px);
+        }
+
+        /* Rounded sliders */
+
+        .slider.round {
+            border-radius: 20px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .labelText {
+            padding-left: 5px;
+            font-size: 15px;
+        }
+
+        #mainDiv {
+            padding: 8px;
+        }
+
+    </style>
+
+    <script>
+        require([
+            "esri/WebMap",
+            "esri/views/MapView",
+            "esri/layers/FeatureLayer",
+            "esri/widgets/FeatureTable",
+            "esri/widgets/FeatureForm",
+            "esri/core/watchUtils"
+        ], (
+            WebMap,
+            MapView,
+            FeatureLayer,
+            FeatureTable,
+            FeatureForm,
+            watchUtils
+        ) => {
+            let selectedFeature, id;
+            const features = [];
+
+            const webmap = new WebMap({
+                portalItem: {
+                    id: "209aa768f537468cb5f76f35baa7e013"
+
+                }
+            });
+
+            const view = new MapView({
+                map: webmap,
+                container: "viewDiv",
+            });
+
+            // When view is ready, find feature layer and set title and outFields
+            //查看就绪后，查找要素图层并设置标题和外场
+            view.when(() => {
+                const featureLayer = webmap.findLayerById("OverlaySchools_2862");
+                featureLayer.title = "US Private school enrollment";
+                featureLayer.outFields = ["*"];
+
+
+                // Get references to div elements for toggling table visibility
+                //获取对div元素的引用以切换表可见性
+                const appContainer = document.getElementById("appContainer");
+                const tableContainer = document.getElementById("tableContainer");
+                const tableDiv = document.getElementById("tableDiv");
+
+                //创建FeatureForm
+                // const featureForm = new FeatureForm({
+                //   container: "conter", // HTML div
+                //   feature: featureLayer.outFields, // Pass in feature
+                //   // Specify the form's template for how it is configured
+                //   //指定表单模板的配置方式
+                //   formTemplate: template
+                // });
+                // Check if a user clicked on an incident feature.
+
+                // Create FeatureTable
+                const featureTable = new FeatureTable({
+                    view: view, // make sure to pass in view in order for selection to work //确保在视图中通过以使选择生效
+                    layer: featureLayer,
+                    fieldConfigs: [{
+                        name: "state_name",
+                        label: "所在州",
+                        direction: "asc"
+                    },
+                        {
+                            name: "PercentagePrivate",
+                            label: "私立学校所占比例"
+                        },
+                        {
+                            name: "PercentagePublic",
+                            label: "公立学校所占比例"
+                        },
+                        {
+                            name: "TotalPrivate",
+                            label: "私立学校数量"
+                        },
+                        {
+                            name: "TotalPublic",
+                            label: "公立学校数量"
+                        },
+                        {
+                            name: "TotalSchools",
+                            label: "学校总数"
+                        },
+                        {
+                            name: "pop2000",
+                            label: "2000年人口数据"
+                        }
+
+
+                    ],
+                    container: tableDiv
+                });
+                view.on('click', function (e) {
+                    console.log(featureLayer)
+                })
+
+                //添加切换可见性滑块
+                view.ui.add(document.getElementById("mainDiv"), "top-left");
+
+                // Get reference to div elements
+                //获取对div元素的引用
+                const checkboxEle = document.getElementById("checkboxId");
+                const labelText = document.getElementById("labelText");
+
+                // Listen for when toggle is changed, call toggleFeatureTable function
+                //监听切换是否更改，调用toggleFeatureTable函数
+                checkboxEle.onchange = () => {
+                    toggleFeatureTable();
+                };
+
+                function toggleFeatureTable() {
+                    // Check if the table is displayed, if so, toggle off. If not, display.
+                    //检查是否显示表格，如果显示，请关闭。如果不是，则显示。
+                    if (!checkboxEle.checked) {
+                        appContainer.removeChild(tableContainer);
+                        labelText.innerHTML =
+                            "展示属性列表";
+                    } else {
+                        appContainer.appendChild(tableContainer);
+                        labelText.innerHTML =
+                            "隐藏属性列表";
+						
+                    }
+                }
+
+                featureTable.on("selection-change", (changes) => {
+
+                    // If row is unselected in table, remove it from the features array
+                    //如果在表中未选中行，请将其从要素数组中删除
+                    changes.removed.forEach((item) => {
+                        const data = features.find((data) => {
+                            return data.feature === item.feature;
+                        });
+                    });
+
+                    // If a row is selected, add to the features array
+                    //如果选择了行，请添加到要素阵列
+                    changes.added.forEach((item) => {
+                        const feature = item.feature;
+                        features.push({
+                            feature: feature
+                        });
+
+                        // Listen for row selection in the feature table. If the popup is open and a row is selected that is not the same feature as opened popup, close the existing popup.
+                        //侦听功能表中的行选择。如果弹出窗口已打开，并且选择的行与打开的弹出窗口功能不同，请关闭现有弹出窗口。
+                        if ((feature.attributes.OBJECTID !== id) && (view.popup.visible === true)) {
+                            featureTable.deselectRows(selectedFeature);
+                            view.popup.close();
+                        }
+                    });
+                });
+
+                // Watch for the popup's visible property. Once it is true, clear the current table selection and select the corresponding table row from the popup
+                //观察弹出窗口的可见属性。如果为true，请清除当前表格选择并从弹出窗口中选择相应的表格行
+                watchUtils.watch(view.popup.viewModel, "active", (graphic) => {
+                    selectedFeature = view.popup.selectedFeature;
+                    if ((selectedFeature !== null) && (view.popup.visible !== false)) {
+                        featureTable.clearSelection();
+                        featureTable.selectRows(view.popup.selectedFeature);
+                        id = selectedFeature.getObjectId();
+                    }
+                });
+            });
+
+            //创建表格
+            var myChart = echarts.init(document.getElementById('main'));
+            var option = {
+                title: {
+                    text: '美国各州学校数量'
+                },
+                tooltip: {},
+                legend: {
+                    data: ['学校数量']
+                },
+                xAxis: {
+                    data: ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Pennsylvania", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"]
+                },
+                yAxis: {},
+                series: [{
+                    name: '学校数量',
+                    type: 'bar',
+                    data: [1982, 478, 2823, 1269, 13492, 2229, 1520, 333, 314, 5899, 3196, 389, 892, 5805, 2645, 1668, 1595, 1880, 1842, 743, 2124, 2562, 4637, 2940, 1279, 3016, 933, 1321, 833, 746, 3737, 1067, 6338, 3202, 589, 4660, 1979, 1700, 5363, 443, 1580, 803, 2289, 10676, 1217, 429, 2866, 2902, 888, 3094, 406]
+                }]
+            };
+            myChart.setOption(option);
+
+            //创建表格
+            var myChart2 = echarts.init(document.getElementById('main2'));
+            var option2 = {
+                title: {
+                    text: '美国各州私立学校数量'
+                },
+                tooltip: {},
+                legend: {
+                    data: ['私立学校数量']
+                },
+                xAxis: {
+                    data: ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Pennsylvania", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"]
+                },
+                yAxis: {},
+                series: [{
+                    name: '私立学校数量',
+                    type: 'bar',
+                    data: [360, 43, 320, 150, 3217, 386, 355, 111, 66, 1626, 644, 115, 115, 1402, 674, 211, 199, 300, 358, 137, 670, 706, 716, 471, 191, 580, 102, 208, 147, 262, 1132, 158, 1671, 579, 43, 834, 165, 396, 2071, 133, 335, 68, 471, 1364, 148, 107, 686, 571, 113, 798, 35]
+                }]
+            };
+            myChart2.setOption(option2);
+            //创建表格
+            var myChart3 = echarts.init(document.getElementById('main3'));
+            var option3 = {
+                title: {
+                    text: '美国各州公立学校数量'
+                },
+                tooltip: {},
+                legend: {
+                    data: ['公立学校数量']
+                },
+                xAxis: {
+                    data: ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Pennsylvania", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"]
+                },
+                yAxis: {},
+                series: [{
+                    name: '公立学校数量',
+                    type: 'bar',
+                    data: [1622, 435, 2503, 1119, 10275, 1843, 1165, 222, 248, 4273, 2552, 274, 777, 4403, 1971, 1457, 1396, 1580, 1484, 606, 1454, 1856, 3921, 2469, 1088, 2436, 831, 1113, 686, 484, 2605, 909, 4667, 2623, 546, 3826, 1814, 1304, 3292, 310, 1245, 735, 1818, 9312, 1069, 322, 2180, 2331, 775, 2296, 371]
+                }]
+            };
+            myChart3.setOption(option3);
+
+
+        });
+
+
+    </script>
+</head>
+
+<body>
+<div id="appContainer">
+    <div id="viewDiv">
+<button type="button" id="btn2" onclick="addDiv_civilian()">美国公有私有学校分布现状
+        <button>
+    </div>
+    
+            <div id="tableContainer" class="container">
+
+                <div id="tableDiv"></div>
+                <div id="main" style="width: 50%;height:500px;bottom:1px;"></div>
+            </div>
+
+            <div id="mainDiv" class="esri-widget">
+                <label class="switch">
+                    <input id="checkboxId" type="checkbox" checked="yes">
+                    <span class="slider round"></span>
+                </label>
+                <label class="labelText" id="labelText">Hide feature table</label>
+
+            </div>
+
+
+</div>
+<div id="main2" style="position: absolute;width: 50%;height:250px;left:0px;"></div>
+<div id="main3" style="position: absolute;width: 50%;height:250px;right:0px;"></div>
+<script>
+	var wenben="“免费的美国公立学校”:美国公立学校有政府财政支持，所以学生上学是完全免费的。在公立学校上学，你不能强制要求学生带或买任何东西，只能建议，包括并不限于校服、课本、文具（包括铅笔、橡皮、铅笔盒、纸、本子之类的用品）等，学校里会提供大部分东西。有些学校会要求学生穿校服，但是如果学生买不起，学校也会提供一些。早餐和午餐也是如此，如果是低收入家庭，可以申请打折或者免费。其实本来也不贵，一顿饭也就4块美金左右，两顿不到10块美金，就这样，很多人也出不起这笔钱。所以其实很多穷人送孩子上学的一个目的：有人给看着，而且有饭吃。除此以外，还有免费的校车等其他服务。“昂贵的私立学校”：私立学校的学费因为地区不同，价位也不同，就加州而言，小学一年的学费从6000多美金到3W多美金不等，平均1W多美金比较常见。但是私立学校除了学费以外还有各种材料费、活动费、书本费、校服费，还有捐款等费用。无论公立还是私立，下午基本3点左右放学，3点到6点之间可以选择上after school或者day care。有少数是免费的，多半是收费的，即便是公立学校也如此，私立学校更贵而已，一个月几百到上千美金不等。美国家庭一般家里会养两个孩子，除去衣食住行这些必备开销，剩下的就是教育了。"
+	
+    function addDiv_civilian() {
+
+        var div000 = document.createElement("div");
+
+        //var div000 = document.getElementById('div000');
+        div000.id = 'div_chart';
+        div000.style.width = '50%'
+        div000.style.height = '73%';
+        div000.style.position = 'absolute';
+        //div000.style.backgroundColor='#d0e4fe';
+        div000.style.left = '30%';
+        div000.style.top = '20%';
+        document.body.appendChild(div000);
+        var p11 = document.createElement("p");
+        var p12 = document.createElement("p");
+        p11.style.width = '100%'
+        p11.style.height = '60%';
+        p11.style.position = 'absolute';
+        p11.style.backgroundColor = 'white';
+        p11.style.opacity = 0.9;
+
+        p11.style.left = '0%';
+        p11.style.bottom = '40%';
+		var img1=document.createElement("img");
+		img1.id = 'img1';
+						    img1.src ='meiguo.jpeg';
+						    img1.style.width = '100%';
+						    img1.style.height ='auto';
+							p11.appendChild(img1);
+        div000.appendChild(p11)
+        p12.style.width = '100%'
+        p12.style.height = '40%';
+        p12.style.position = 'absolute';
+        p12.style.backgroundColor = '#ffd790';
+        p12.style.opacity = 0.9;
+
+        p12.style.left = '0%';
+        p12.style.bottom = '0%';
+		p12.innerHTML=wenben;
+        div000.appendChild(p12);
+        div000.style.display = "block";
+
+       div000.addEventListener("click", function () {
+            // alert("jkjj")
+            console.log(document.querySelector('#div000'))
+            this.style.display = 'none';
+        });
+    }
+
+
+</script>
+</body>
+
+</html>
